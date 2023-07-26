@@ -23,13 +23,6 @@ export class AIProxyLibrarySettingTab extends PluginSettingTab {
             // 展示插件的小贴士
             .setName(this.plugin.translation.tipTitle)
             .setDesc(this.randomTips())  // 给用户来点不一样的东西
-            .addButton((button) => {
-                button
-                    .setButtonText("换个tip")
-                    .onClick(async () => {
-                        button.setButtonText(this.randomTips());
-                    });
-            });
 
         new Setting(containerEl)
             // api key
@@ -154,6 +147,7 @@ export class AIProxyLibrarySettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     })
             );
+
 
     }
 
