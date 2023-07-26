@@ -23,7 +23,7 @@ const DEFAULT_SETTINGS: AIPLibrarySettings = {
 	modelName: "gpt-3.5-turbo",
 	libraryNumber: 0,
 	apiKey: "",
-	aiproxyBaseUrl: "https://api.aiproxy.io/api",
+	aiproxyBaseUrl: "https://aiproxy.io/api",
 	aiproxyAskUrl: "https://api.aiproxy.io/api/library/ask",
 	ignoreFolders: "",
 	useSmarterTextSplit: false,
