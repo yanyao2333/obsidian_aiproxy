@@ -1,9 +1,15 @@
-import axios, {AxiosResponse} from 'axios';
+import axios, {AxiosResponse} from "axios";
+
+
+interface AIPLibraryResponse {
+    data: any,
+    success: boolean,
+    errMsg?: string,
+}
 
 class AIPLibrary {
-    client = axios.create();
-    BASE_URL: string;
-    apiKey: string;
+    private readonly BASE_URL: string;
+    private readonly apiKey: string;
 
     constructor(api_key: string, BASE_URL = "https://aiproxy.io/api") {
         this.apiKey = api_key;
@@ -13,7 +19,12 @@ class AIPLibrary {
         this.BASE_URL = BASE_URL;
     }
 
-    async createLibrary(library_name: string, description: string): Promise<number> {
+    respCheck(resp: any): boolean {
+        return !(resp.status != 200 || resp.data.success != true || resp.data.errorCode != 0);
+    }
+
+    async createLibrary(library_name: string, description: string): Promise<AIPLibraryResponse> {
+        // return: {data: {libraryId: number}, success: boolean, errMsg?: string}
         const _url = this.BASE_URL + "/library/create";
         const _headers = {
             "Content-Type": "application/json",
@@ -24,14 +35,19 @@ class AIPLibrary {
             "description": description
         }
 
-        const _resp = await this.client.post(_url, {data: _data, headers: _headers});
-        if (!this.respCheck(_resp)) {
-            throw new Error(_resp.data.message);
+        try {
+            const _resp = await axios.post(_url, _data, {headers: _headers});
+            if (!this.respCheck(_resp)) {
+                return { data: _resp.data, success: false, errMsg: _resp.data.message };
+            }
+            return { data: _resp.data.data, success: true };
+        }catch (e) {
+            return { data: e, success: false, errMsg: e.message };
         }
-        return _resp.data.data;
     }
 
-    async add_doc_by_url(library_id: number, urls: string[], refresh: boolean = true): Promise<string[]> {
+    async add_doc_by_url(library_id: number, urls: string[], refresh: boolean = true): Promise<AIPLibraryResponse> {
+        // return: {data: {docIds: string[]}, success: boolean, errMsg?: string}
         const _url = `${this.BASE_URL}/library/document/createByUrl`;
         const _headers = {
             "Api-Key": this.apiKey
@@ -41,16 +57,19 @@ class AIPLibrary {
             "refresh": refresh,
             "urls": urls
         };
-        let _resp: AxiosResponse;
         try {
-            _resp = await axios.post(_url, _data, { headers: _headers });
-        } catch (e) {
-            throw new Error(e.message);
+            const _resp = await axios.post(_url, _data, {headers: _headers});
+            if (!this.respCheck(_resp)) {
+                return { data: _resp.data, success: false, errMsg: _resp.data.message };
+            }
+            return { data: _resp.data.data, success: true };
+        }catch (e) {
+            return {data: e, success: false, errMsg: e.message};
         }
-        return _resp.data.data;
     }
 
-    async add_doc_by_text(library_id: number, text: string, title: string, doc_url: string = ""): Promise<string> {
+    async add_doc_by_text(library_id: number, text: string, title: string, doc_url: string = ""): Promise<AIPLibraryResponse> {
+        // return: {data: {docId: string}, success: boolean, errMsg?: string}
         const _url = `${this.BASE_URL}/library/document/createByText`;
         const _headers = {
             "Api-Key": this.apiKey
@@ -61,20 +80,19 @@ class AIPLibrary {
             "title": title,
             "url": doc_url?.toString()
         };
-        let _resp: AxiosResponse;
         try {
-            _resp = await axios.post(_url, _data, { headers: _headers });
-        } catch (e) {
-            throw new Error(e.message);
+            const _resp = await axios.post(_url, _data, {headers: _headers});
+            if (!this.respCheck(_resp)) {
+                return { data: _resp.data, success: false, errMsg: _resp.data.message };
+            }
+            return { data: _resp.data.data, success: true };
+        }catch (e) {
+            return {data: e, success: false, errMsg: e.message};
         }
-        return _resp.data.data;
     }
 
-    respCheck(resp: any): boolean {
-        return !(resp.status != 200 || resp.data.success != true || resp.data.errorCode != 0);
-    }
-
-    async deleteDoc(docIds: string[], libraryId: number): Promise<boolean> {
+    async deleteDoc(docIds: string[], libraryId: number): Promise<AIPLibraryResponse> {
+        // return: {data: boolean | Error, success: boolean, errMsg?: string}
         const url = `${this.BASE_URL}/library/document/delete`;
         const data = {
             libraryId,
@@ -83,16 +101,19 @@ class AIPLibrary {
         const _headers = {
             "Api-Key": this.apiKey
         };
-        const response = await axios.post(url, data, { headers: _headers });
-
-        if (!this.respCheck(response)) {
-            throw new Error(response.data.message);
+        try {
+            const _resp = await axios.post(url, data, {headers: _headers});
+            if (!this.respCheck(_resp)) {
+                return { data: _resp.data, success: false, errMsg: _resp.data.message };
+            }
+            return { data: true, success: true };
+        }catch (e) {
+            return {data: e, success: false, errMsg: e.message};
         }
-
-        return true;
     }
 
-    async ask(libraryId: number, query: string, model: string = "gpt-3.5-turbo", stream: boolean = false, url: string = "https://api.aiproxy.io/api/library/ask", timeout: number = 90000): Promise<any> {
+    async ask(libraryId: number, query: string, model: string = "gpt-3.5-turbo", stream: boolean = false, url: string = "https://api.aiproxy.io/api/library/ask", timeout: number = 90000): Promise<AIPLibraryResponse> {
+        // return: {data: dict, success: boolean, errMsg?: string}
         if (stream) {
             throw new Error("Streaming is currently not supported");
         }
@@ -106,17 +127,19 @@ class AIPLibrary {
             query,
             stream
         };
-
-        const response = await axios.post(url, data, { headers, timeout });
-
-        if (response.status !== 200 || response.data.success !== true) {
-            throw new Error(response.data.message);
+        try {
+            const resp = await axios.post(url, data, {headers, timeout});
+            if (resp.status != 200 || resp.data.success != true) {
+                return { data: resp.data, success: false, errMsg: resp.data.message };
+            }
+            return { data: resp.data, success: true };
+        }catch (e) {
+            return {data: e, success: false, errMsg: e.message};
         }
-
-        return response.data;
     }
 
-    async editLibrary(libraryObj: Library): Promise<boolean> {
+    async editLibrary(libraryObj: Library): Promise<AIPLibraryResponse> {
+        // return: {data: boolean | Error, success: boolean, errMsg?: string}
         const url = `${this.BASE_URL}/library/update`;
         const data = {
             libraryId: libraryObj.libraryId,
@@ -131,16 +154,19 @@ class AIPLibrary {
         const _headers = {
             "Api-Key": this.apiKey
         };
-        const response = await axios.post(url, data, { headers: _headers });
-
-        if (!this.respCheck(response)) {
-            throw new Error(response.data.message);
+        try {
+            const resp = await axios.post(url, data, {headers: _headers});
+            if (!this.respCheck(resp)) {
+                return { data: resp.data, success: false, errMsg: resp.data.message };
+            }
+            return { data: true, success: true };
+        }catch (e) {
+            return {data: e, success: false, errMsg: e.message};
         }
-
-        return true;
     }
 
-    async getLibrary(libraryId: number): Promise<[Library, any]> {
+    async getLibrary(libraryId: number): Promise<AIPLibraryResponse> {
+        // return: {data: Library | Error, success: boolean, errMsg?: string}
         const url = `${this.BASE_URL}/library/get`;
         const params = {
             libraryId
@@ -148,13 +174,18 @@ class AIPLibrary {
         const _headers = {
             "Api-Key": this.apiKey
         };
-        const response = await axios.get(url, { params, headers: _headers });
-
-        if (!this.respCheck(response)) {
-            throw new Error(response.data.message);
+        let resp: AxiosResponse;
+        try {
+            resp = await axios.get(url, {params, headers: _headers});
+            if (resp.status != 200 || resp.data.success != true || resp.data.errorCode != 0 || resp.data.data == null) {
+                // 这里有坑，当get一个不存在或不属于自己的library时，msg和success都是正常的，但是data是null，需要单独处理
+                return { data: resp.data, success: false, errMsg: "libraryId not found or it is not owned to you" };
+            }
+        }catch (e) {
+            return {data: e, success: false, errMsg: e.message};
         }
 
-        const data = response.data.data;
+        const data = resp.data.data;
         const libraryObj: Library = {
             libraryId: data.id,
             libraryName: data.libraryName,
@@ -166,9 +197,46 @@ class AIPLibrary {
             similarityTopK: data.similarityTopK
         };
 
-        return [libraryObj, data];
+        return { data: libraryObj, success: true };
+    }
+
+
+    async listDocs(libraryId: number, page: number, pageSize: number, order: Order = Order.DESC, orderBy: OrderBy = OrderBy.GMT_CREATE): Promise<AIPLibraryResponse> {
+        // return: dict, success: boolean, errMsg?: string}
+        const url = `${this.BASE_URL}/library/listDocument`;
+        const params = {
+            libraryId,
+            page,
+            pageSize,
+            order,
+            orderBy
+        };
+        const _headers = {
+            "Api-Key": this.apiKey
+        };
+        try {
+            const resp = await axios.get(url, {params, headers: _headers});
+            if (!this.respCheck(resp)) {
+                return { data: resp.data, success: false, errMsg: resp.data.message };
+            }
+            return { data: resp.data.data, success: true };
+        }catch (e) {
+            return {data: e, success: false, errMsg: e.message};
+        }
     }
 }
+
+export enum Order {
+    ASC = "asc",
+    DESC = "desc"
+}
+
+export enum OrderBy {
+    GMT_CREATE = "gmtCreate",
+    GMT_MODIFIED = "gmtModified",
+    LIBRARY_NAME = "libraryName"
+}
+
 interface Library {
     libraryId: number,
     libraryName: string,
