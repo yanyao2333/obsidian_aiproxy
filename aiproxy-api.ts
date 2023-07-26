@@ -7,7 +7,7 @@ interface AIPLibraryResponse {
     errMsg?: string,
 }
 
-class AIPLibrary {
+export default class AIPLibrary {
     private readonly BASE_URL: string;
     private readonly apiKey: string;
 
