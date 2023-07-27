@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "Obsidian-AIProxy",
+	"name": "Obsidian-AIProxy",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "This is a sample plugin for Obsidian. This plugin demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "将aiproxy知识库集成在obsidian中，您可以通过这个插件与您的文档对话",
+	"author": "yanyao2333",
+	"authorUrl": "https://github.com/yanyao2333/",
+	"fundingUrl": "https://github.com/yanyao2333/obsidian_aiproxy",
 	"isDesktopOnly": false
 }

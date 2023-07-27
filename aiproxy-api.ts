@@ -1,4 +1,4 @@
-import axios, {AxiosResponse} from "axios";
+import {requestUrl} from "obsidian";
 
 
 interface AIPLibraryResponse {
@@ -36,9 +36,17 @@ export default class AIPLibrary {
         }
 
         try {
-            const _resp = await axios.post(_url, _data, {headers: _headers});
+            // const _resp = await axios.post(_url, _data, {headers: _headers});
+            const _rawResp = await requestUrl({
+                method: "POST",
+                headers: _headers,
+                body: JSON.stringify(_data),
+                url: _url,
+                contentType: "application/json"
+            });
+            const _resp = _rawResp.json
             if (!this.respCheck(_resp)) {
-                return { data: _resp.data, success: false, errMsg: _resp.data.message };
+                return { data: _resp.data, success: false, errMsg: _resp.message };
             }
             return { data: _resp.data.data, success: true };
         }catch (e) {
@@ -58,9 +66,17 @@ export default class AIPLibrary {
             "urls": urls
         };
         try {
-            const _resp = await axios.post(_url, _data, {headers: _headers});
+            // const _resp = await axios.post(_url, _data, {headers: _headers});
+            const _rawResp = await requestUrl({
+                method: "POST",
+                headers: _headers,
+                body: JSON.stringify(_data),
+                url: _url,
+                contentType: "application/json"
+            });
+            const _resp = _rawResp.json
             if (!this.respCheck(_resp)) {
-                return { data: _resp.data, success: false, errMsg: _resp.data.message };
+                return { data: _resp.data, success: false, errMsg: _resp.message };
             }
             return { data: _resp.data.data, success: true };
         }catch (e) {
@@ -78,15 +94,27 @@ export default class AIPLibrary {
             "libraryId": library_id,
             "text": text,
             "title": title,
-            "url": doc_url?.toString()
+            "url": doc_url
         };
         try {
-            const _resp = await axios.post(_url, _data, {headers: _headers});
+            // const _resp = await axios.post(_url, _data, {headers: _headers});
+            console.log(_data)
+            console.log(JSON.stringify(_data))
+            const _rawResp = await requestUrl({
+                contentType: "application/json",
+                method: "POST",
+                headers: _headers,
+                body: JSON.stringify(_data),
+                url: _url
+            });
+            const _resp = _rawResp.json
+            console.log(_resp)
             if (!this.respCheck(_resp)) {
-                return { data: _resp.data, success: false, errMsg: _resp.data.message };
+                return { data: _resp.data, success: false, errMsg: _resp.message };
             }
             return { data: _resp.data.data, success: true };
         }catch (e) {
+            console.error(e.stack);
             return {data: e, success: false, errMsg: e.message};
         }
     }
@@ -102,9 +130,17 @@ export default class AIPLibrary {
             "Api-Key": this.apiKey
         };
         try {
-            const _resp = await axios.post(url, data, {headers: _headers});
+            // const _resp = await axios.post(url, data, {headers: _headers});
+            const _rawResp = await requestUrl({
+                method: "POST",
+                headers: _headers,
+                body: JSON.stringify(data),
+                url: url,
+                contentType: "application/json"
+            });
+            const _resp = _rawResp.json
             if (!this.respCheck(_resp)) {
-                return { data: _resp.data, success: false, errMsg: _resp.data.message };
+                return { data: _resp.data, success: false, errMsg: _resp.message };
             }
             return { data: true, success: true };
         }catch (e) {
@@ -128,9 +164,18 @@ export default class AIPLibrary {
             stream
         };
         try {
-            const resp = await axios.post(url, data, {headers, timeout});
+            // const resp = await axios.post(url, data, {headers, timeout});
+            const _rawResp = await requestUrl({
+                method: "POST",
+                headers: headers,
+                body: JSON.stringify(data),
+                url: url,
+                contentType: "application/json",
+                // timeout: timeout  // 默认超时时间远超请求接收时间
+            });
+            const resp = _rawResp.json
             if (resp.status != 200 || resp.data.success != true) {
-                return { data: resp.data, success: false, errMsg: resp.data.message };
+                return { data: resp.data, success: false, errMsg: resp.message };
             }
             return { data: resp.data, success: true };
         }catch (e) {
@@ -155,9 +200,17 @@ export default class AIPLibrary {
             "Api-Key": this.apiKey
         };
         try {
-            const resp = await axios.post(url, data, {headers: _headers});
+            // const resp = await axios.post(url, data, {headers: _headers});
+            const _rawResp = await requestUrl({
+                method: "POST",
+                headers: _headers,
+                body: JSON.stringify(data),
+                url: url,
+                contentType: "application/json"
+            });
+            const resp = _rawResp.json
             if (!this.respCheck(resp)) {
-                return { data: resp.data, success: false, errMsg: resp.data.message };
+                return { data: resp.data, success: false, errMsg: resp.message };
             }
             return { data: true, success: true };
         }catch (e) {
@@ -168,15 +221,23 @@ export default class AIPLibrary {
     async getLibrary(libraryId: number): Promise<AIPLibraryResponse> {
         // return: {data: Library | Error, success: boolean, errMsg?: string}
         const url = `${this.BASE_URL}/library/get`;
+        const libraryIdStr = String(libraryId);
         const params = {
-            libraryId
+            libraryId: libraryIdStr
         };
+        const addParamsUrl = url + "?" + new URLSearchParams(params).toString();
         const _headers = {
             "Api-Key": this.apiKey
         };
-        let resp: AxiosResponse;
+        let resp;
         try {
-            resp = await axios.get(url, {params, headers: _headers});
+            // resp = await axios.get(url, {params, headers: _headers});
+            const _rawResp = await requestUrl({
+                method: "GET",
+                headers: _headers,
+                url: addParamsUrl
+            });
+            resp = _rawResp.json
             if (resp.status != 200 || resp.data.success != true || resp.data.errorCode != 0 || resp.data.data == null) {
                 // 这里有坑，当get一个不存在或不属于自己的library时，msg和success都是正常的，但是data是null，需要单独处理
                 return { data: resp.data, success: false, errMsg: "libraryId not found or it is not owned to you" };
@@ -205,9 +266,9 @@ export default class AIPLibrary {
         // return: dict, success: boolean, errMsg?: string}
         const url = `${this.BASE_URL}/library/listDocument`;
         const params = {
-            libraryId,
-            page,
-            pageSize,
+            libraryId: String(libraryId),
+            page: String(page),
+            pageSize: String(pageSize),
             order,
             orderBy
         };
@@ -215,9 +276,15 @@ export default class AIPLibrary {
             "Api-Key": this.apiKey
         };
         try {
-            const resp = await axios.get(url, {params, headers: _headers});
+            // const resp = await axios.get(url, {params, headers: _headers});
+            const _rawResp = await requestUrl({
+                method: "GET",
+                headers: _headers,
+                url: url + "?" + new URLSearchParams(params).toString()
+            });
+            const resp = _rawResp.json
             if (!this.respCheck(resp)) {
-                return { data: resp.data, success: false, errMsg: resp.data.message };
+                return { data: resp.data, success: false, errMsg: resp.message };
             }
             return { data: resp.data.data, success: true };
         }catch (e) {
