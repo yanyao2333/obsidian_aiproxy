@@ -20,7 +20,7 @@ export default class AIPLibrary {
     }
 
     respCheck(resp: any): boolean {
-        return !(resp.status != 200 || resp.data.success != true || resp.data.errorCode != 0);
+        return !(resp.status != 200 || resp.success != true || resp.errorCode != 0);
     }
 
     async createLibrary(library_name: string, description: string): Promise<AIPLibraryResponse> {
@@ -112,12 +112,14 @@ export default class AIPLibrary {
                 url: _url
             });
             const _resp = _rawResp.json
+            _resp["status"] = _rawResp.status
+            console.log(_resp)
             if (!this.respCheck(_resp)) {
                 console.error({data: _resp.data, success: false, errMsg: _resp.message});
                 return { data: _resp.data, success: false, errMsg: _resp.message };
             }
-            console.log({data: _resp.data.data, success: true});
-            return { data: _resp.data.data, success: true };
+            console.log({data: _resp.data, success: true});
+            return { data: _resp.data, success: true };
         }catch (e) {
             console.error(e.stack);
             return {data: e, success: false, errMsg: e.message};
@@ -143,7 +145,8 @@ export default class AIPLibrary {
                 url: url,
                 contentType: "application/json"
             });
-            const _resp = _rawResp.json
+            let _resp = _rawResp.json
+            _resp["status"] = _rawResp.status
             if (!this.respCheck(_resp)) {
                 console.error({data: _resp.data, success: false, errMsg: _resp.message});
                 return { data: _resp.data, success: false, errMsg: _resp.message };
@@ -181,12 +184,13 @@ export default class AIPLibrary {
                 contentType: "application/json",
                 // timeout: timeout  // 默认超时时间远超请求接收时间
             });
-            const resp = _rawResp.json
+            let resp = _rawResp.json
+            resp["status"] = _rawResp.status
             if (resp.status != 200 || resp.data.success != true) {
                 console.error({data: resp.data, success: false, errMsg: resp.message});
                 return { data: resp.data, success: false, errMsg: resp.message };
             }
-            console.log({data: resp.data.data, success: true});
+            console.log({data: resp.data, success: true});
             return { data: resp.data, success: true };
         }catch (e) {
             console.error(e.stack);
@@ -219,7 +223,8 @@ export default class AIPLibrary {
                 url: url,
                 contentType: "application/json"
             });
-            const resp = _rawResp.json
+            let resp = _rawResp.json
+            resp["status"] = _rawResp.status
             if (!this.respCheck(resp)) {
                 console.error({data: resp.data, success: false, errMsg: resp.message});
                 return { data: resp.data, success: false, errMsg: resp.message };
@@ -252,7 +257,8 @@ export default class AIPLibrary {
                 url: addParamsUrl
             });
             resp = _rawResp.json
-            if (resp.status != 200 || resp.data.success != true || resp.data.errorCode != 0 || resp.data.data == null) {
+            resp["status"] = _rawResp.status
+            if (resp.status != 200 || resp.success != true || resp.errorCode != 0 || resp.data == null) {
                 // 这里有坑，当get一个不存在或不属于自己的library时，msg和success都是正常的，但是data是null，需要单独处理
                 console.error({data: resp.data, success: false, errMsg: resp.message});
                 return { data: resp.data, success: false, errMsg: "libraryId not found or it is not owned to you" };
@@ -262,7 +268,7 @@ export default class AIPLibrary {
             return {data: e, success: false, errMsg: e.message};
         }
 
-        const data = resp.data.data;
+        const data = resp.data;
         const libraryObj: Library = {
             libraryId: data.id,
             libraryName: data.libraryName,
@@ -299,13 +305,14 @@ export default class AIPLibrary {
                 headers: _headers,
                 url: url + "?" + new URLSearchParams(params).toString()
             });
-            const resp = _rawResp.json
+            let resp = _rawResp.json
+            resp["status"] = _rawResp.status
             if (!this.respCheck(resp)) {
                 console.error({data: resp.data, success: false, errMsg: resp.message});
                 return { data: resp.data, success: false, errMsg: resp.message };
             }
-            console.log({data: resp.data.data, success: true});
-            return { data: resp.data.data, success: true };
+            console.log({data: resp.data, success: true});
+            return { data: resp.data, success: true };
         }catch (e) {
             console.error(e.stack);
             return {data: e, success: false, errMsg: e.message};

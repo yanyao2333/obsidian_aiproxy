@@ -73,6 +73,7 @@ interface LocalizedStrings {
 	emptyApiKey: string;
 	tipTitle: string;
 	needInputNumber: string;
+	useMyInviteCode: string;
 }
 
 const DEFAULT_TRANSLATION: LocalizedStrings = {
@@ -87,10 +88,10 @@ const DEFAULT_TRANSLATION: LocalizedStrings = {
 		autoUploadInterval: "自动上传的时间间隔（分钟）"
 	},
 	settingDescriptions: {
-		apiKey: `在<a href='https://aiproxy.io/?i=daidai' target='_blank'>aiproxy.io</a>注册并获取API Key，请确保您在生成key时选择了下方`,
+		apiKey: `在aiproxy.io注册并获取API Key，请确保您在生成key时选择了下方使用的模型`,
 		modelName: "模型类型，跟openai官网一致，推荐选择gpt-3.5-turbo/gpt-4",
 		ignoreFolders: "逗号分隔的文件夹名，这些文件夹下的文件不会被上传到aiproxy知识库",
-		libraryNumber: "知识库ID，可以在<a href='https://aiproxy.io/dashboard/library' target='_blank'>aiproxy.io/library</a>创建并查看 (如果没有注册，请先访问<a href='https://aiproxy.io/?i=daidai' target='_blank'>aiproxy.io</a>注册)",
+		libraryNumber: "知识库ID，可以在aiproxy.io创建并查看",
 		aiproxyBaseUrl: "aiproxy的base url，一般不需要修改",
 		aiproxyAskUrl: "aiproxy的ask url，一般不需要修改",
 		useSmarterTextSplit: "使用更智能的文本分割(开发中)",
@@ -120,7 +121,8 @@ const DEFAULT_TRANSLATION: LocalizedStrings = {
 	noActiveFileOrNotMarkdown: "没有活动中的文件或者活动中的文件不是markdown文件",
 	emptyApiKey: "请先在设置中填入API Key\n否则我要罢工了!",
 	tipTitle: "Obsidian-AIProxy 使用小贴士",
-	needInputNumber: "请确认自己输入的是纯数字！"
+	needInputNumber: "请确认自己输入的是纯数字！",
+	useMyInviteCode: "<a href='https://aiproxy.io/?i=daidai' target='_blank'>使用我的激活码（daidai）</a>注册并充值可以获得3%的额外奖励！"
 }
 
 
@@ -182,7 +184,7 @@ export default class AIProxyLibraryPlugin extends Plugin {
 		const libraryId = this.settings.libraryNumber;
 		const resp = await aiplib.add_doc_by_text(libraryId, content, title);
 		if (resp.success) {
-			new Notice(this.translation.successManualUploadDoc + ` "${title}"` + "\n" + `docId: ${resp.data.docId}`);
+			new Notice(this.translation.successManualUploadDoc + ` "${title}"` + "\n" + `docId: ${resp.data}`);
 		} else {
 			new Notice(this.translation.failedManualUploadDoc + "\n" + resp.errMsg);
 		}

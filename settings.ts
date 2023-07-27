@@ -1,4 +1,4 @@
-import {App, Setting, PluginSettingTab, Notice} from "obsidian";
+import {App, Setting, PluginSettingTab, Notice, SettingTab} from "obsidian";
 import AIProxyLibraryPlugin from "./main";
 
 export class AIProxyLibrarySettingTab extends PluginSettingTab {
@@ -18,7 +18,7 @@ export class AIProxyLibrarySettingTab extends PluginSettingTab {
     display(): void {
         let { containerEl } = this;
         containerEl.empty();
-        containerEl.createEl("h2", {text: this.plugin.translation.setting});
+        containerEl.createEl("h3", {text: this.plugin.translation.setting});
         new Setting(containerEl)
             // 展示插件的小贴士
             .setName(this.plugin.translation.tipTitle)
@@ -139,7 +139,8 @@ export class AIProxyLibrarySettingTab extends PluginSettingTab {
                         "10": "10分钟",
                         "15": "15分钟",
                         "30": "30分钟",
-                        "60": "60分钟"
+                        "60": "60分钟",
+                        "114514": "永不"
                     })
                     .setValue(String(this.plugin.settings.autoUploadInterval))
                     .onChange(async (value) => {
