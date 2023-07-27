@@ -46,10 +46,13 @@ export default class AIPLibrary {
             });
             const _resp = _rawResp.json
             if (!this.respCheck(_resp)) {
+                console.error({data: _resp.data, success: false, errMsg: _resp.message});
                 return { data: _resp.data, success: false, errMsg: _resp.message };
             }
+            console.log({data: _resp.data.data, success: true});
             return { data: _resp.data.data, success: true };
         }catch (e) {
+            console.error(e.stack);
             return { data: e, success: false, errMsg: e.message };
         }
     }
@@ -76,10 +79,13 @@ export default class AIPLibrary {
             });
             const _resp = _rawResp.json
             if (!this.respCheck(_resp)) {
+                console.error({data: _resp.data, success: false, errMsg: _resp.message});
                 return { data: _resp.data, success: false, errMsg: _resp.message };
             }
+            console.log({data: _resp.data.data, success: true});
             return { data: _resp.data.data, success: true };
         }catch (e) {
+            console.error(e.stack);
             return {data: e, success: false, errMsg: e.message};
         }
     }
@@ -98,8 +104,6 @@ export default class AIPLibrary {
         };
         try {
             // const _resp = await axios.post(_url, _data, {headers: _headers});
-            console.log(_data)
-            console.log(JSON.stringify(_data))
             const _rawResp = await requestUrl({
                 contentType: "application/json",
                 method: "POST",
@@ -108,10 +112,11 @@ export default class AIPLibrary {
                 url: _url
             });
             const _resp = _rawResp.json
-            console.log(_resp)
             if (!this.respCheck(_resp)) {
+                console.error({data: _resp.data, success: false, errMsg: _resp.message});
                 return { data: _resp.data, success: false, errMsg: _resp.message };
             }
+            console.log({data: _resp.data.data, success: true});
             return { data: _resp.data.data, success: true };
         }catch (e) {
             console.error(e.stack);
@@ -140,10 +145,13 @@ export default class AIPLibrary {
             });
             const _resp = _rawResp.json
             if (!this.respCheck(_resp)) {
+                console.error({data: _resp.data, success: false, errMsg: _resp.message});
                 return { data: _resp.data, success: false, errMsg: _resp.message };
             }
+            console.log({data: true, success: true, rawAPIMsg: _resp});
             return { data: true, success: true };
         }catch (e) {
+            console.error(e.stack);
             return {data: e, success: false, errMsg: e.message};
         }
     }
@@ -175,10 +183,13 @@ export default class AIPLibrary {
             });
             const resp = _rawResp.json
             if (resp.status != 200 || resp.data.success != true) {
+                console.error({data: resp.data, success: false, errMsg: resp.message});
                 return { data: resp.data, success: false, errMsg: resp.message };
             }
+            console.log({data: resp.data.data, success: true});
             return { data: resp.data, success: true };
         }catch (e) {
+            console.error(e.stack);
             return {data: e, success: false, errMsg: e.message};
         }
     }
@@ -210,10 +221,13 @@ export default class AIPLibrary {
             });
             const resp = _rawResp.json
             if (!this.respCheck(resp)) {
+                console.error({data: resp.data, success: false, errMsg: resp.message});
                 return { data: resp.data, success: false, errMsg: resp.message };
             }
+            console.log({data: true, success: true, rawAPIMsg: resp});
             return { data: true, success: true };
         }catch (e) {
+            console.error(e.stack);
             return {data: e, success: false, errMsg: e.message};
         }
     }
@@ -240,9 +254,11 @@ export default class AIPLibrary {
             resp = _rawResp.json
             if (resp.status != 200 || resp.data.success != true || resp.data.errorCode != 0 || resp.data.data == null) {
                 // 这里有坑，当get一个不存在或不属于自己的library时，msg和success都是正常的，但是data是null，需要单独处理
+                console.error({data: resp.data, success: false, errMsg: resp.message});
                 return { data: resp.data, success: false, errMsg: "libraryId not found or it is not owned to you" };
             }
         }catch (e) {
+            console.error(e.stack);
             return {data: e, success: false, errMsg: e.message};
         }
 
@@ -258,6 +274,7 @@ export default class AIPLibrary {
             similarityTopK: data.similarityTopK
         };
 
+        console.log({data: libraryObj, success: true});
         return { data: libraryObj, success: true };
     }
 
@@ -284,10 +301,13 @@ export default class AIPLibrary {
             });
             const resp = _rawResp.json
             if (!this.respCheck(resp)) {
+                console.error({data: resp.data, success: false, errMsg: resp.message});
                 return { data: resp.data, success: false, errMsg: resp.message };
             }
+            console.log({data: resp.data.data, success: true});
             return { data: resp.data.data, success: true };
         }catch (e) {
+            console.error(e.stack);
             return {data: e, success: false, errMsg: e.message};
         }
     }
