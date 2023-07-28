@@ -1,13 +1,10 @@
-import {
-	App,
-	Notice,
-	Plugin,
-	PluginManifest
-} from 'obsidian';
+import {App, FileSystemAdapter, Notice, Plugin, PluginManifest} from 'obsidian';
 import AIPLibrary from './aiproxy-api';
 import {AIProxyLibrarySettingTab} from "./settings";
+import MappingFileController from "./mapping-control";
+import * as path from "path";
 
-interface AIPLibrarySettings {
+export interface AIPLibrarySettings {
 	// define user settings
 	apiKey: string;
 	modelName: string;
@@ -156,6 +153,14 @@ export default class AIProxyLibraryPlugin extends Plugin {
 			// ],
 		});
 
+		this.addCommand({
+			id: 'rebuild-mapping-file',
+			name: this.translation.RebuildMappingFile,
+			callback: () => {
+				this.rebuildMappingFile();
+			}
+		});
+
 
 		this.addSettingTab(new AIProxyLibrarySettingTab(this.app, this));
 	}
@@ -188,5 +193,24 @@ export default class AIProxyLibraryPlugin extends Plugin {
 		} else {
 			new Notice(this.translation.failedManualUploadDoc + "\n" + resp.errMsg);
 		}
+	}
+
+
+
+	getMappingJsonDir() {
+		let adapter = app.vault.adapter;
+		let basePath = "./";
+		// 根据论坛说法，这个adapter在手机端不一定是FileSystemAdapter，所以要判断一下
+		if (adapter instanceof FileSystemAdapter) {
+			basePath = adapter.getBasePath();
+		}
+		const configDir = this.app.vault.configDir;
+		return path.join(basePath, configDir, "plugins", "obsidian-aiproxy", "mapping.json");
+	}
+
+
+	async rebuildMappingFile() {
+		const mappingFileCtrl = new MappingFileController(this.getMappingJsonDir(), this.app, this.settings);
+		mappingFileCtrl.uploadNoDocIdFilesToAIProxy();
 	}
 }

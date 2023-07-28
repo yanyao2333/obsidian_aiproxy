@@ -113,7 +113,7 @@ export default class AIPLibrary {
             });
             const _resp = _rawResp.json
             _resp["status"] = _rawResp.status
-            console.log(_resp)
+
             if (!this.respCheck(_resp)) {
                 console.error({data: _resp.data, success: false, errMsg: _resp.message});
                 return { data: _resp.data, success: false, errMsg: _resp.message };
