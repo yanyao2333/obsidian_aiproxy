@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import {TFile, App, TAbstractFile, TFolder} from "obsidian";
+import {App, TFile} from "obsidian";
 import AIPLibrary from "./aiproxy-api";
 import {AIPLibrarySettings} from "./main"
 
@@ -36,9 +36,13 @@ export default class MappingFileController {
             console.error("读取json文件失败，可能文件已损坏，备份后进入初始化流程")
             console.error(err.stack)
             // 备份原文件
+            if (fs.existsSync(this.jsonFilePath + ".bak")){
+                fs.rmSync(this.jsonFilePath + ".bak")
+            }
             fs.renameSync(this.jsonFilePath, this.jsonFilePath + ".bak");
             this.initMappingFile()
-            return null
+            data = fs.readFileSync(this.jsonFilePath, 'utf8')
+            return JSON.parse(data);
         }
     }
 
@@ -126,13 +130,13 @@ export default class MappingFileController {
              const cfile = this.app.vault.getAbstractFileByPath(file);
              if (cfile == null) {
                     console.error("未找到该文件，请检查路径是否正确或是否已被删除")
-                    return false;
+                    return null;
              }
              if (cfile instanceof TFile) {
                  Tfile = cfile;
              }else{
                     console.error("该路径指向了一个目录，请检查路径是否正确")
-                    return false;
+                    return null;
              }
         }
         else {
@@ -145,44 +149,38 @@ export default class MappingFileController {
         if (r.success) {
             const docId = r.data;
             const singleFileMapping = mappingArray.find((item: SingleMdFileMapping) => item.fileFullPath === Tfile.path);
-            console.log(singleFileMapping)
             if (singleFileMapping != null) {
-                mappingArray.remove(singleFileMapping)
                 singleFileMapping.aiproxyLibraryDocId = docId;
-                mappingArray.push(singleFileMapping);
-                console.log("上传成功，我要更新映射文件了")
-                console.log(mappingArray)
-                this.writeJson(mappingArray);
-                return true
+                return singleFileMapping;
             }
-            const newSingleFileMapping = this.buildSingleFileMapping(Tfile, docId);
-            mappingArray.push(newSingleFileMapping);
-            console.log("上传成功，我要更新映射文件了")
-            console.log(mappingArray)
-            this.writeJson(mappingArray);
-            return true
+            return this.buildSingleFileMapping(Tfile, docId);
         }
-        console.error("上传文件失败，请检查上方日志")
-        return false
+        return null
     };
+
 
     // 将所有本地有映射数据，但无docId的文件上传到aiproxy(大小为0的直接排除，因为上传也会报错)
     async uploadNoDocIdFilesToAIProxy(): Promise<void> {
-        let mappingArray = this.readJson();
-        let count = 0;
+
+        let successCount = 0;
+        const mappingArray = this.readJson();
+        const updatedMappings: SingleMdFileMapping[] = []
         for (const singleFileMapping of mappingArray) {
-            if (singleFileMapping.aiproxyLibraryDocId == null && singleFileMapping.fileStat.size != 0) {
-                const resp = await this.uploadSingleFileToAIProxy(singleFileMapping.fileFullPath)
-                if (resp) {
-                    count += 1;
-                }else{
-                    console.error("上传文件失败，大概是文件被删除")
-                }
-                mappingArray = this.readJson();
+            if (singleFileMapping.aiproxyLibraryDocId == null && singleFileMapping.fileStat.size !== 0) {
+                const r = await this.uploadSingleFileToAIProxy(singleFileMapping.fileFullPath);
+                if (r != null) {
+                    successCount++;
+                    singleFileMapping.aiproxyLibraryDocId = r.aiproxyLibraryDocId;
+                    updatedMappings.push(singleFileMapping);
+                } // 如果上传失败，就不更新mapping文件，相当于直接删除该节点，等待下次同步时再次上传
+            }else{
+                updatedMappings.push(singleFileMapping);
             }
         }
-        console.log(`总共上传了${count}个文件，感觉自己好棒！`)
-        return;
+        this.writeJson(updatedMappings);
+        console.log(`总共上传了${successCount}个文件，感觉自己好棒！`);
+        console.log("已完成本地和aiproxy远端的文件映射数据同步")
+
     }
 
 
