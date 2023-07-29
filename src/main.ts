@@ -211,6 +211,6 @@ export default class AIProxyLibraryPlugin extends Plugin {
 
 	async rebuildMappingFile() {
 		const mappingFileCtrl = new MappingFileController(this.getMappingJsonDir(), this.app, this.settings);
-		mappingFileCtrl.uploadNoDocIdFilesToAIProxy();
+		await mappingFileCtrl.rebuidMappingFile()
 	}
 }
