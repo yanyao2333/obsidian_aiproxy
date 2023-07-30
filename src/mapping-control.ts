@@ -1,7 +1,8 @@
 import * as fs from 'fs';
-import {App, TFile} from "obsidian";
+import {App, Notice, TFile, TFolder} from "obsidian";
 import AIPLibrary from "./aiproxy-api";
 import {AIPLibrarySettings} from "./main"
+import {DEFAULT_TRANSLATION, LocalizedStrings} from "./constants";
 
 interface SingleMdFileMapping {
     fileName: string;
@@ -35,35 +36,31 @@ export default class MappingFileController {
     jsonFilePath: string;
     settings: AIPLibrarySettings;
     app: App
+    translation: LocalizedStrings;
 
     constructor(jsonFilePath: string, app: App, settings: AIPLibrarySettings) {
-        // please called initMappingFile() after constructor!!!!!!!!!
         console.log(`Initializing MappingFileController with jsonFilePath=${jsonFilePath}`);
         this.jsonFilePath = jsonFilePath;
         this.app = app;
         this.settings = settings;
-        // this.initMappingFile()
+        this.translation = DEFAULT_TRANSLATION;
+        if (this.settings.apiKey == "" || this.settings.libraryNumber == 0) {
+            console.log("API key or library number is not set, stop anything.");
+            return;
+        }
+        this.initMappingFile()
     }
 
-    private readJson() {
+    private readJson(): SingleMdFileMapping[] | null {
         let data: string
         try {
             console.log(`Reading JSON file: ${this.jsonFilePath}`);
             data = fs.readFileSync(this.jsonFilePath, 'utf8')
             return JSON.parse(data);
         } catch (err) {
-            // console.error("Failed to read the JSON file, the file might be corrupted. Starting initialization process after backing up.");
-            // console.error(err.stack)
-            // // 备份原文件
-            // if (fs.existsSync(this.jsonFilePath + ".bak")){
-            //     fs.rmSync(this.jsonFilePath + ".bak")
-            // }
-            // fs.renameSync(this.jsonFilePath, this.jsonFilePath + ".bak");
-            // this.initMappingFile()
-            // data = fs.readFileSync(this.jsonFilePath, 'utf8')
-            // return JSON.parse(data);
             console.error("Failed to read the JSON file, the file might be corrupted. ");
             console.error(err.stack)
+            return null;
         }
     }
 
@@ -88,7 +85,11 @@ export default class MappingFileController {
             if (parent == null) {
                 break;
             }
+            if (parent.name === "") {
+                parentFolders.push("/");
+            }else{
             parentFolders.push(parent.name);
+            }
             // @ts-ignore
             currentLevel = parent;
         }
@@ -132,24 +133,20 @@ export default class MappingFileController {
         return mappingArray
     }
 
-    async initMappingFile(): Promise<void> {
+    initMappingFile(): void {
         // 在未找到json文件 或者 json文件为空的情况下，创建一个base mapping file，并将文件上传到aiproxy
         if (!fs.existsSync(this.jsonFilePath)) {
             const mappingArray = this.buildBaseMappingFile();
             this.writeJson(mappingArray);
-            // 上传所有文件到aiproxy
-            await this.uploadNoDocIdFilesToAIProxy()
         }
         if (fs.existsSync(this.jsonFilePath) && fs.readFileSync(this.jsonFilePath, 'utf8') === '') {
             const mappingArray = this.buildBaseMappingFile();
             this.writeJson(mappingArray);
-            // 上传所有文件到aiproxy
-            await this.uploadNoDocIdFilesToAIProxy()
         }
     }
 
 
-    // 上传一个文件到aiproxy（只要提供文件path或TFile对象就可上传并自动生成映射数据）
+    // 上传一个文件到aiproxy（只要提供文件path或TFile对象就可上传并自动生成最新的映射数据）
     async uploadSingleFileToAIProxy(file: TFile | string): Promise<SingleMdFileMapping | null> {
         console.log(`Uploading single file to AI Proxy: ${file}`);
         let Tfile: TFile;
@@ -169,17 +166,16 @@ export default class MappingFileController {
         else {
             Tfile = file;  // 蜜汁作用域，看不懂，只好这样写了
         }
-        const mappingArray = this.readJson();
         const aiplib = new AIPLibrary(this.settings.apiKey);
-        const content = await this.app.vault.cachedRead(Tfile)
+        const content = await this.app.vault.cachedRead(Tfile);  // 传入内容不可能是null
         const r = await aiplib.add_doc_by_text(this.settings.libraryNumber, content, Tfile.path)
         if (r.success) {
             const docId = r.data;
-            const singleFileMapping = mappingArray.find((item: SingleMdFileMapping) => item.fileFullPath === Tfile.path);
-            if (singleFileMapping != null) {
-                singleFileMapping.aiproxyLibraryDocId = docId;
-                return singleFileMapping;
-            }
+            // const singleFileMapping = mappingArray.find((item: SingleMdFileMapping) => item.fileFullPath === Tfile.path);
+            // if (singleFileMapping != null) {
+            //     singleFileMapping.aiproxyLibraryDocId = docId;
+            //     return singleFileMapping;
+            // }
             return this.buildSingleFileMapping(Tfile, docId);
         }
         return null
@@ -190,16 +186,18 @@ export default class MappingFileController {
     async uploadNoDocIdFilesToAIProxy(): Promise<void> {
         console.log("Start uploading files without docId to AI Proxy");
         let successCount = 0;
-        const mappingArray: SingleMdFileMapping[] = this.readJson();
+        const mappingArray = this.readJson();
+        if (mappingArray == null) {
+            return;
+        }
         const updatedMappings: SingleMdFileMapping[] = []
         for (const singleFileMapping of mappingArray) {
             if (singleFileMapping.aiproxyLibraryDocId == null && singleFileMapping.fileStat.size !== 0) {
                 const r = await this.uploadSingleFileToAIProxy(singleFileMapping.fileFullPath);
                 if (r != null) {
                     successCount++;
-                    singleFileMapping.aiproxyLibraryDocId = r.aiproxyLibraryDocId;
-                    updatedMappings.push(singleFileMapping);
-                } // 如果上传失败，就不更新mapping，相当于直接删除该节点，等待下次同步时再次上传
+                    updatedMappings.push(r); // 上传成功后，将新的mapping数据写入mapping文件
+                } // 如果上传失败，就不更新mapping，相当于直接删除该节点，等待下次同步时再次上传，本质上已经起到了同步文件删除的作用
             }else{
                 updatedMappings.push(singleFileMapping);
             }
@@ -213,13 +211,17 @@ export default class MappingFileController {
 
     async rebuidMappingFile(): Promise<void> {
         // 高危操作 球球了能跑就别动
+        // 当然，如果你手贱删了mapping文件，这个或许能救你一命
         console.log("Start rebuilding the mapping file");
         // 拉取远端所有文档的docId，和本地得到的最新所有文件路径进行比对，将匹配的数据重新写入mapping文件，如果本地有，但远端没有，就正常写入，但docId为null，如果远端有，本地没有，就忽视
         const remoteDocs = await this.getAllDocsFromAIProxy()
         const newMappingFile: SingleMdFileMapping[] = this.buildBaseMappingFile();
         const mappingArray: SingleMdFileMapping[] = []
         for (const localFileMapping of newMappingFile) {
-            const remoteDoc = remoteDocs.find((item: AIProxyDocInfo) => item.title === localFileMapping.fileName);
+            if (this.isFileShouldIgnore(localFileMapping)) {
+                continue;
+            }
+            const remoteDoc = remoteDocs.find((item: AIProxyDocInfo) => item.title === localFileMapping.fileFullPath);
             if (remoteDoc != null) {
                 console.log(`${localFileMapping.fileName} -> ${remoteDoc.docId}    mapping success`);
                 localFileMapping.aiproxyLibraryDocId = remoteDoc.docId;
@@ -239,10 +241,16 @@ export default class MappingFileController {
         // 将本地文件增量同步到aiproxy（注意，仅仅是文件，不会关注具体内容是否变化）
         // 这个函数将做两件事：1. 将本地新增文件上传到aiproxy并更新本地mapping文件（这部分文件是本地mapping所没有的） 2. 将本地没有docId的文件上传到aiproxy并更新本地mapping文件（这部分文件是本地mapping有，但是docId为空的）
         const mappingArray = this.readJson();
+        if (mappingArray == null) {
+            return;
+        }
         const baseMappingFile: SingleMdFileMapping[] = this.buildBaseMappingFile();
         const newMappingArray: SingleMdFileMapping[] = [];
         console.log("start uploading new files to AI Proxy");
         for (const singleFileMapping of baseMappingFile) {
+            if (this.isFileShouldIgnore(singleFileMapping)) {
+                continue;
+            }
             // 查找是否与本地mapping文件有匹配的文件名
             const localFileMapping = mappingArray.find((item: SingleMdFileMapping) => item.fileFullPath === singleFileMapping.fileFullPath);
             if (localFileMapping != null) {
@@ -276,10 +284,38 @@ export default class MappingFileController {
     }
 
 
-    async removeCallback(file: TFile): Promise<void> {
+    async removeFolderCallback(folder: TFolder): Promise<void> {
+        // 删除本地文件夹时，删除aiproxy中的对应文档
+        // 某些极端情况下可能会存在docId没有正确映射的情况，这时候需要再加上文件名双重判断
+        const mappingArray = this.readJson()
+        const updatedMappings: SingleMdFileMapping[] = [];
+        if (mappingArray == null) {
+            return;
+        }
+        for (const singleFileMapping of mappingArray) {
+            if (singleFileMapping.fileFullPath.startsWith(folder.path)) {
+                if (singleFileMapping.aiproxyLibraryDocId == null) {
+                    // 如果没有docId，就直接删除
+                    continue;
+                }
+                const AIP = new AIPLibrary(this.settings.apiKey);
+                await AIP.deleteDoc([singleFileMapping.aiproxyLibraryDocId], this.settings.libraryNumber);
+            }else {
+                // 不在文件夹下的文件，保留原有的docId
+                updatedMappings.push(singleFileMapping);
+            }
+        }
+        this.writeJson(updatedMappings);
+    }
+
+
+    async removeFileCallback(file: TFile): Promise<void> {
         // 删除本地文件时，删除aiproxy中的对应文档
         // 某些极端情况下可能会存在docId没有正确映射的情况，这时候需要再加上文件名双重判断
-        const mappingArray = this.readJson();
+        const mappingArray = this.readJson()
+        if (mappingArray == null) {
+            return;
+        }
         const singleFileMapping = mappingArray.find((item: SingleMdFileMapping) => item.fileFullPath === file.path);
         if (singleFileMapping != null) {
             if (singleFileMapping.aiproxyLibraryDocId != null) {
@@ -297,8 +333,25 @@ export default class MappingFileController {
                     console.log(`delete ${file.path} from AI Proxy successfully`);
                 }
             }
+            mappingArray.remove(singleFileMapping);
+            this.writeJson(mappingArray);
         }
     }
+
+
+    isFileShouldIgnore(file: SingleMdFileMapping): boolean {
+        // 过滤掉不需要同步的文件
+        if (this.settings.ignoreFolders.length === 0) {
+            return false;
+        }
+        for (const filterFile of this.settings.ignoreFolders) {
+            if (file.parentFolders.includes(filterFile)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 
 
     async smartSync(): Promise<void> {
@@ -308,29 +361,76 @@ export default class MappingFileController {
         // 3. 重新生成mapping文件
 
         // notice: mapping文件所记录的文件大小和修改时间等数据，是在文件上传到aiproxy时记录的，可以看作aiproxy的记录，所以只需获取最新的与本地比对（后期可以考虑增加on_modify事件，来减轻每次同步的复杂度）
+        console.log("Start smart synchronization");
         await this.incrementalFileSync();
-        const mappingArray: SingleMdFileMapping[] = this.readJson();
+        const mappingArray = this.readJson();
+        if (mappingArray == null) {
+            return;
+        }
         const baseMappingFile: SingleMdFileMapping[] = this.buildBaseMappingFile();
         const newMappingArray: SingleMdFileMapping[] = [];
         const AIP = new AIPLibrary(this.settings.apiKey);
         for (const singleFileMapping of mappingArray) {
+            if (this.isFileShouldIgnore(singleFileMapping)) {
+                continue;
+            }
             if (singleFileMapping.aiproxyLibraryDocId != null) {
                 const correntFile = baseMappingFile.find((item: SingleMdFileMapping) => item.fileFullPath === singleFileMapping.fileFullPath);
                 if (correntFile != null) {
                     if (correntFile.fileStat.size > singleFileMapping.fileStat.size) {
                         console.log(`${correntFile.fileName} -> ${singleFileMapping.aiproxyLibraryDocId}    file may changed, upload again`);
                         await AIP.deleteDoc([singleFileMapping.aiproxyLibraryDocId], this.settings.libraryNumber);
-                        const newDocId = await this.uploadSingleFileToAIProxy(correntFile.fileFullPath);
-                        if (newDocId != null) {
-                            correntFile.aiproxyLibraryDocId = newDocId.aiproxyLibraryDocId;
-                            newMappingArray.push(correntFile);
+                        const newDoc = await this.uploadSingleFileToAIProxy(correntFile.fileFullPath);
+                        if (newDoc != null) {
+                            newMappingArray.push(newDoc);  // 这里使用newDoc和correntFile都可以，但是还是以最新的为准吧
+                        }else {
+                            console.log(`upload ${correntFile.fileFullPath} to AI Proxy failed, rollback to old mapping info`);
+                            newMappingArray.push(singleFileMapping);
                         }
+                    }else {
+                        newMappingArray.push(singleFileMapping);
                     }
                 }
+            }else {
+                // 理论来说不可能出现这种情况，因为在增量同步时，会将没有docId的文件重新上传到aiproxy，但不排除上传失败
+                newMappingArray.push(singleFileMapping);
             }
 
         }
+        this.writeJson(newMappingArray);
+        console.log("Finish smart synchronization");
     }
 
 
+    async manualAddDoc() {
+        if (!this.settings.apiKey) {
+            // 这个操作是用户手动发起的，必须以显式的方式告知用户运行情况
+            new Notice(this.translation.emptyApiKey);
+            return;
+        }
+        const activeFile = this.app.workspace.getActiveFile();
+        if (!activeFile || activeFile.extension !== "md") {
+            new Notice(this.translation.noActiveFileOrNotMarkdown);
+            return;
+        }
+        const single = await this.uploadSingleFileToAIProxy(activeFile.path);
+        if (single != null) {
+            const mappingArray = this.readJson();
+            if (mappingArray == null) {
+                return;
+            }
+            const singleFileMapping = mappingArray.find((item: SingleMdFileMapping) => item.fileFullPath === activeFile.path);
+            if (singleFileMapping != null) {
+                mappingArray.remove(singleFileMapping);
+                mappingArray.push(single);
+                this.writeJson(mappingArray);
+            }else {
+                mappingArray.push(single);
+                this.writeJson(mappingArray);
+            }
+            new Notice(this.translation.successManualUploadDoc);
+        }else {
+            new Notice(this.translation.failedManualUploadDoc);
+        }
+    }
 }

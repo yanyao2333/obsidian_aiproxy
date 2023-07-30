@@ -135,6 +135,7 @@ export class AIProxyLibrarySettingTab extends PluginSettingTab {
             .addDropdown((dropdown) =>
                 dropdown
                     .addOptions({
+                        "1": "1分钟",
                         "5": "5分钟",
                         "10": "10分钟",
                         "15": "15分钟",
@@ -146,6 +147,12 @@ export class AIProxyLibrarySettingTab extends PluginSettingTab {
                     .onChange(async (value) => {
                         this.plugin.settings.autoUploadInterval = Number(value);
                         await this.plugin.saveSettings();
+                        if (Number(value) !== 114514) {
+                            this.plugin.registerInterval(window.setInterval(() => this.plugin.mappingFileCtrl.smartSync(), 1000*60*Number(value)));
+                            console.log("auto upload register, interval: ", Number(value));
+                        }else {
+                            console.log("auto upload stop");
+                        }
                     })
             );
 
