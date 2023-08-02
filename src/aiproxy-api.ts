@@ -7,6 +7,8 @@ interface AIPLibraryResponse {
     errMsg?: string,
 }
 
+
+
 export default class AIPLibrary {
     private readonly BASE_URL: string;
     private readonly apiKey: string;
@@ -57,7 +59,7 @@ export default class AIPLibrary {
         }
     }
 
-    async add_doc_by_url(library_id: number, urls: string[], refresh: boolean = true): Promise<AIPLibraryResponse> {
+    async add_doc_by_url(library_id: number, urls: string[], refresh = true): Promise<AIPLibraryResponse> {
         // return: {data: {docIds: string[]}, success: boolean, errMsg?: string}
         const _url = `${this.BASE_URL}/library/document/createByUrl`;
         const _headers = {
@@ -90,7 +92,7 @@ export default class AIPLibrary {
         }
     }
 
-    async add_doc_by_text(library_id: number, text: string, title: string, doc_url: string = ""): Promise<AIPLibraryResponse> {
+    async add_doc_by_text(library_id: number, text: string, title: string, doc_url = ""): Promise<AIPLibraryResponse> {
         // return: {data: {docId: string}, success: boolean, errMsg?: string}
         const _url = `${this.BASE_URL}/library/document/createByText`;
         const _headers = {
@@ -145,7 +147,7 @@ export default class AIPLibrary {
                 url: url,
                 contentType: "application/json"
             });
-            let _resp = _rawResp.json
+            const _resp = _rawResp.json
             _resp["status"] = _rawResp.status
             if (!this.respCheck(_resp)) {
                 console.error({data: _resp.data, success: false, errMsg: _resp.message});
@@ -159,7 +161,7 @@ export default class AIPLibrary {
         }
     }
 
-    async ask(libraryId: number, query: string, model: string = "gpt-3.5-turbo", stream: boolean = false, url: string = "https://api.aiproxy.io/api/library/ask", timeout: number = 90000): Promise<AIPLibraryResponse> {
+    async ask(libraryId: number, query: string, model = "gpt-3.5-turbo", stream = false, url = "https://api.aiproxy.io/api/library/ask", timeout = 90000): Promise<AIPLibraryResponse> {
         // return: {data: dict, success: boolean, errMsg?: string}
         if (stream) {
             throw new Error("Streaming is currently not supported");
@@ -184,14 +186,15 @@ export default class AIPLibrary {
                 contentType: "application/json",
                 // timeout: timeout  // 默认超时时间远超请求接收时间
             });
-            let resp = _rawResp.json
+            const resp = _rawResp.json
+            console.log(resp)
             resp["status"] = _rawResp.status
-            if (resp.status != 200 || resp.data.success != true) {
-                console.error({data: resp.data, success: false, errMsg: resp.message});
-                return { data: resp.data, success: false, errMsg: resp.message };
+            if (resp.status != 200 || resp.success != true) {
+                console.error({data: resp, success: false, errMsg: resp.message});
+                return { data: resp, success: false, errMsg: resp.message };
             }
             console.log({data: resp.data, success: true});
-            return { data: resp.data, success: true };
+            return { data: resp, success: true };
         }catch (e) {
             console.error(e.stack);
             return {data: e, success: false, errMsg: e.message};
@@ -223,7 +226,7 @@ export default class AIPLibrary {
                 url: url,
                 contentType: "application/json"
             });
-            let resp = _rawResp.json
+            const resp = _rawResp.json
             resp["status"] = _rawResp.status
             if (!this.respCheck(resp)) {
                 console.error({data: resp.data, success: false, errMsg: resp.message});
@@ -305,7 +308,7 @@ export default class AIPLibrary {
                 headers: _headers,
                 url: url + "?" + new URLSearchParams(params).toString()
             });
-            let resp = _rawResp.json
+            const resp = _rawResp.json
             resp["status"] = _rawResp.status
             if (!this.respCheck(resp)) {
                 console.error({data: resp.data, success: false, errMsg: resp.message});

@@ -1,9 +1,10 @@
-import {App, FileSystemAdapter, Notice, Plugin, PluginManifest, TFile, TFolder} from 'obsidian';
+import {App, FileSystemAdapter, ItemView, Notice, Plugin, PluginManifest, TFile, TFolder} from 'obsidian';
 import AIPLibrary from './aiproxy-api';
 import {AIProxyLibrarySettingTab} from "./settings";
 import MappingFileController from "./mapping-control";
 import * as path from "path";
-import {DEFAULT_TRANSLATION, LocalizedStrings} from "./constants";
+import {DEFAULT_TRANSLATION, LocalizedStrings, VIEW_TYPE} from "./constants";
+import {ChatViewType} from "./view";
 
 export interface AIPLibrarySettings {
 	// define user settings
@@ -29,6 +30,10 @@ const DEFAULT_SETTINGS: AIPLibrarySettings = {
 }
 
 
+export let g_app: App;
+export let g_settings: AIPLibrarySettings;
+
+
 
 export default class AIProxyLibraryPlugin extends Plugin {
 	settings: AIPLibrarySettings;
@@ -37,6 +42,8 @@ export default class AIProxyLibraryPlugin extends Plugin {
 
 	constructor(app: App, manifest: PluginManifest) {
 		super(app, manifest);
+		g_app = this.app;
+		g_settings = this.settings;
 		this.settings = DEFAULT_SETTINGS;
 		this.translation = DEFAULT_TRANSLATION;
 	}
@@ -87,29 +94,43 @@ export default class AIProxyLibraryPlugin extends Plugin {
 			console.log("delete file: ", file);
 			if (file instanceof TFile) {
 				this.mappingFileCtrl.removeFileCallback(file);
-			}else if (file instanceof TFolder) {
+			} else if (file instanceof TFolder) {
 				this.mappingFileCtrl.removeFolderCallback(file);
 			}
 		}));
 
 		// loading interval...
 		if (this.settings.autoUploadInterval !== 114514) {
-			this.registerInterval(window.setInterval(() => this.mappingFileCtrl.smartSync(), 1000*60*this.settings.autoUploadInterval));
+			this.registerInterval(window.setInterval(() => this.mappingFileCtrl.smartSync(), 1000 * 60 * this.settings.autoUploadInterval));
 			console.log("auto upload register, interval: ", this.settings.autoUploadInterval);
 		}
 
 		// loading mapping file controller...
 		this.mappingFileCtrl = new MappingFileController(this.getMappingJsonDir(), this.app, this.settings);
+
+		// loading view...
+		this.registerView(
+			VIEW_TYPE,
+			(leaf) => new ChatViewType(leaf)
+		);
+		this.addRibbonIcon("dice", "Activate view", () => {
+			this.activateView();
+		});
+	}
+
+	async onunload() {
+		this.app.workspace.detachLeavesOfType(VIEW_TYPE);
 	}
 
 	async loadSettings() {
 		this.settings = Object.assign(this.settings, await this.loadData());
+		g_settings = this.settings;
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+		g_settings = this.settings;
 	}
-
 
 
 	getMappingJsonDir() {
@@ -121,5 +142,18 @@ export default class AIProxyLibraryPlugin extends Plugin {
 		}
 		const configDir = this.app.vault.configDir;
 		return path.join(basePath, configDir, "plugins", "obsidian-aiproxy", "mapping.json");
+	}
+
+	async activateView() {
+		this.app.workspace.detachLeavesOfType(VIEW_TYPE);
+
+		await this.app.workspace.getRightLeaf(false).setViewState({
+			type: VIEW_TYPE,
+			active: true,
+		});
+
+		this.app.workspace.revealLeaf(
+			this.app.workspace.getLeavesOfType(VIEW_TYPE)[0]
+		);
 	}
 }

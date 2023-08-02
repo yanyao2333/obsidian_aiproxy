@@ -1,3 +1,5 @@
+export const VIEW_TYPE = "aiproxy-view";
+
 export interface LocalizedStrings {
     // 将散落在代码中的字符串统一管理，方便后期修改
     smartSync: string;
