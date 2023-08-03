@@ -1,17 +1,21 @@
 import * as React from 'react';
 import {useCallback, useState} from 'react';
 
-import './styles.css';
+// import './styles.css';
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight'
 import AIPLibrary from "./aiproxy-api";
 import {g_app, g_settings} from "./main";
-import {Button, Space, Typography} from "antd";
-import TextareaAutosize from 'react-textarea-autosize';
+// import SendIcon from '@mui/icons-material/Send';
+import {Send as SendIcon} from "@mui/icons-material";
+// import LoadingButton from '@mui/lab/LoadingButton';
+import {LoadingButton} from '@mui/lab';
+// import TextField from '@mui/material/TextField';
+// import Grid from '@mui/material';
+import {Grid, TextField} from "@mui/material";
 
-const {Text} = Typography;
 
 const enum Role {
     Assistant = 'assistant',
@@ -72,7 +76,7 @@ function AddDocsIntoAnswer(answer: string, docs: ReferDocument[]) {
 }
 
 
-export default () => {
+function ChatView() {
     const [query, setQuery] = useState('');
     const [thinking, setThinking] = useState(false); // thinking状态，用于控制发送按钮的loading状态
     const [history, setHistory] = useState<SingleMessage[]>([]);
@@ -142,7 +146,7 @@ export default () => {
                             <div className="chat-view__message-content">
                                 {isThinking ? (
                                     // <Text type="secondary">Thinking...</Text>
-                                    <div className="thinking"><span>.</span><span>.</span></div>
+                                    <div className="thinking">Thinking...</div>
                                 ) : (
                                     <ReactMarkdown
                                         remarkPlugins={[remarkGfm]}
@@ -157,30 +161,42 @@ export default () => {
                                     />
                                 )}
                             </div>
-                            {isLast && isUser && (
-                                <div className="chat-view__message-status">
-                                    <Text type="secondary">Sent</Text>
-                                </div>
-                            )}
+                            {/*{isLast && isUser && (*/}
+                            {/*    <div className="chat-view__message-status">*/}
+                            {/*        <Text type="secondary">Sent</Text>*/}
+                            {/*    </div>*/}
+                            {/*)}*/}
                         </div>
                     );
                 })}
             </div>
             <div className="chat-view__footer">
-                <Space>
-                    <TextareaAutosize
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Type your question here..."
-                        disabled={thinking}
-                        style={{width: '70%', fontSize: '16px', borderRadius: '4px', border: '1px solid #ccc', padding: '10px'}}
-                    />
-                    <Button  onClick={getAnswer} loading={thinking} type={"primary"}>
-                        Send
-                    </Button>
-                </Space>
+                <Grid container spacing={2}>
+                    <Grid item xs={10}>
+                        <TextField
+                            id="outlined-textarea"
+                            label="输入框"
+                            placeholder="今天你想问点什么？"
+                            multiline
+                            value={query}
+                            onChange={event => {setQuery(event.target.value)}}
+                        />
+                    </Grid>
+                    <Grid item xs={2}>
+                        <LoadingButton
+                            onClick={getAnswer}
+                            endIcon={<SendIcon />}
+                            loading={thinking}
+                            loadingPosition="end"
+                            variant="contained"
+                        >
+                            Send
+                        </LoadingButton>
+                    </Grid>
+                </Grid>
             </div>
         </div>
     );
 }
+
+export default ChatView;
