@@ -113,7 +113,7 @@ export default class AIProxyLibraryPlugin extends Plugin {
 			VIEW_TYPE,
 			(leaf) => new ChatViewType(leaf)
 		);
-		this.addRibbonIcon("dice", "Activate view", () => {
+		this.addRibbonIcon("bot", "开始与笔记聊天", () => {
 			this.activateView();
 		});
 	}

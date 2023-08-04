@@ -15,7 +15,7 @@ export class ChatViewType extends ItemView {
     }
 
     getDisplayText() {
-        return "aiproxy chat interface";
+        return "aiproxy chat";
     }
 
     async onOpen() {

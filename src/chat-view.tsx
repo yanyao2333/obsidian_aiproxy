@@ -127,12 +127,47 @@ function ChatView() {
         })
     };
 
-    const handleImport = () => {
-        console.log('Importing...');
+    const handleImport = async () => {
+        if (history.length === 0) {
+            new Notice("没有聊天记录");
+            return;
+        }
+        let content = "";
+        for (const msg of history) {
+            if (msg.role === Role.Assistant) {
+                content += "**AI**: " + msg.content + "\n\n";
+            }
+            if (msg.role === Role.User) {
+                content += "**User**: " + msg.content + "\n\n";
+            }
+        }
+        const formatNowTime = () => {
+            const now = new Date();
+            return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
+        }
+        const tf = await g_app.vault.create("Chat  " + formatNowTime() + ".md", content)
+        const activeLeaf = g_app.workspace.getLeaf();
+        if (!activeLeaf) {
+            console.warn('No active leaf');
+            return;
+        }
+        await activeLeaf.openFile(tf, { state: { mode: 'source' } });
+        new Notice("导入成功");
     };
 
-    const handleRegenerate = () => {
-        console.log('Regenerating...');
+    const handleRegenerate = async () => {
+        let lastQuery = history[history.length - 1];
+        if (lastQuery && lastQuery.role === Role.User) {
+            setQuery(lastQuery.content);
+            await getAnswer();
+            return
+        }
+        lastQuery = history[history.length - 2]; // 两次，最多查两次一定能查到
+        if (lastQuery && lastQuery.role === Role.User) {
+            setQuery(lastQuery.content);
+            await getAnswer();
+            return
+        }
     };
 
     const handleClear = () => {
@@ -140,14 +175,14 @@ function ChatView() {
     };
 
     return (
-        <div className="static flex flex-col bg-inherit">
-            <div className="flex-grow overflow-y-auto z-10 h-full/2">
+        <div className="relative bg-inherit h-screen overflow-hidden">
+            <div className="absolute inset-x-0 top-0 overflow-y-auto z-10 bottom-72">
                 {history.map((msg, i) => (
                     <div key={i} className="flex items-start space-x-2 mb-4">
                         <div className="flex-shrink-0">
                             {msg.role === 'user' ? <FaRegUser className="text-blue-500"/> : <FaRobot className="text-green-500"/>}
                         </div>
-                        <div className="flex border rounded p-2 bg-inherit relative select-text overscroll-contain">
+                        <div className="border rounded p-2 bg-inherit relative select-text overscroll-contain">
                             {msg.thinking ? (
                                 <div className="thinking">Thinking...</div>
                             ) : (
@@ -170,7 +205,6 @@ function ChatView() {
                     </div>
                 ))}
             </div>
-            {/*<div className="fixed inset-x-0 bottom-24 m-2 h-24 bg-inherit z-20"></div>*/}
             <div className="fixed inset-x-0 bottom-24 m-2 flex justify-around space-x-1 p-2 bg-inherit z-30">
                 <button onClick={handleImport} className="p-2 text-gray-500" title="将聊天记录导入到新笔记">
                     <FaBookmark />
@@ -182,23 +216,25 @@ function ChatView() {
                     <FaTrash />
                 </button>
             </div>
-            <div className="fixed inset-x-0 bottom-0 m-2 flex items-center justify-between p-3 bg-inherit z-30">
+            <div className="fixed inset-x-0 bottom-0 m-2 flex items-center justify-between p-3 bg-inherit z-40">
                 <div className="flex-grow mr-3">
                     <TextareaAutosize
-                        className="w-full p-2 border-2 border-gray-400 resize-none focus:outline-none transition-all duration-150 ease-in-out bg-inherit text-black dark:text-white"
+                        className="w-full p-2 border-2 border-gray-400 resize-none focus:outline-none transition-all duration-150 ease-in-out bg-inherit dark:text-white"
                         minRows={2}
-                        maxRows={7}
+                        maxRows={3} // 通过限制最多行数避免组件重叠，请叫我天才~
                         placeholder="今天你想问点什么？"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                     />
                 </div>
-                <button  onClick={getAnswer} disabled={thinking} className={`p-2 rounded ${thinking ? 'bg-gray-500 cursor-default' : 'bg-blue-500 hover:bg-blue-700'} text-black`}>
+                <button onClick={getAnswer} disabled={thinking} className={`p-2 rounded ${thinking ? 'bg-gray-500 cursor-default' : 'bg-blue-500 hover:bg-blue-700'} text-black`}>
                     {thinking ? 'Thinking...' : 'Send'} <FaPaperPlane />
                 </button>
             </div>
         </div>
     );
+
+
 
 
 
