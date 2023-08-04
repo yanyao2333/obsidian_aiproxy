@@ -1,11 +1,11 @@
 {
 	"id": "Obsidian-AIProxy",
-	"name": "Obsidian-AIProxy",
+	"name": "Obsidian AIProxy",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "将aiproxy知识库集成在obsidian中，您可以通过这个插件与您的文档对话",
 	"author": "yanyao2333",
 	"authorUrl": "https://github.com/yanyao2333/",
 	"fundingUrl": "https://github.com/yanyao2333/obsidian_aiproxy",
-	"isDesktopOnly": false
+	"isDesktopOnly": true
 }
