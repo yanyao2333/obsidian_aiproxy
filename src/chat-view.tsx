@@ -1,21 +1,14 @@
 import * as React from 'react';
 import {useCallback, useState} from 'react';
 
-// import './styles.css';
-
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import gfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight'
+import { FaRegUser, FaRobot, FaRegCopy, FaPaperPlane, FaBookmark, FaRedo, FaTrash } from 'react-icons/fa';
 import AIPLibrary from "./aiproxy-api";
 import {g_app, g_settings} from "./main";
-// import SendIcon from '@mui/icons-material/Send';
-import {Send as SendIcon} from "@mui/icons-material";
-// import LoadingButton from '@mui/lab/LoadingButton';
-import {LoadingButton} from '@mui/lab';
-// import TextField from '@mui/material/TextField';
-// import Grid from '@mui/material';
-import {Grid, TextField} from "@mui/material";
-
+import TextareaAutosize from "react-textarea-autosize";
+import {Notice} from "obsidian"
 
 const enum Role {
     Assistant = 'assistant',
@@ -104,9 +97,9 @@ function ChatView() {
         if (response.success) {
             data = response.data;
             assistantMessage.content = AddDocsIntoAnswer(data.answer, data.documents || []);
-        }else if (response.errMsg) {
+        } else if (response.errMsg) {
             assistantMessage.content = response.errMsg;
-        }else {
+        } else {
             assistantMessage.content = "未知错误";
         }
         assistantMessage.thinking = false; // 请求结束后，把助手的thinking状态设为false
@@ -128,75 +121,87 @@ function ChatView() {
         [getAnswer],
     );
 
+    const handleCopy = (text: string) => {
+        navigator.clipboard.writeText(text).then(() => {
+            new Notice("已复制到剪贴板");
+        })
+    };
+
+    const handleImport = () => {
+        console.log('Importing...');
+    };
+
+    const handleRegenerate = () => {
+        console.log('Regenerating...');
+    };
+
+    const handleClear = () => {
+        setHistory([]);
+    };
+
     return (
-        <div className="chat-view">
-            <div className="chat-view__history">
-                {history.map((message, index) => {
-                    const isLast = index === history.length - 1;
-                    const isUser = message.role === Role.User;
-                    const isAssistant = message.role === Role.Assistant;
-                    const isThinking = message.thinking;
-                    return (
-                        <div
-                            key={index}
-                            className={`chat-view__message ${
-                                isUser ? 'chat-view__message--user' : ''
-                            } ${isAssistant ? 'chat-view__message--assistant' : ''}`}
-                        >
-                            <div className="chat-view__message-content">
-                                {isThinking ? (
-                                    // <Text type="secondary">Thinking...</Text>
-                                    <div className="thinking">Thinking...</div>
-                                ) : (
-                                    <ReactMarkdown
-                                        remarkPlugins={[remarkGfm]}
-                                        rehypePlugins={[rehypeHighlight]}
-                                        children={message.content}
-                                        transformLinkUri={uri => {
-                                            if (uri.startsWith('obsidian://')) {
-                                                return `javascript:window.open('${uri}','_blank')`;
-                                            }
-                                            return uri;
-                                        }}
-                                    />
-                                )}
-                            </div>
-                            {/*{isLast && isUser && (*/}
-                            {/*    <div className="chat-view__message-status">*/}
-                            {/*        <Text type="secondary">Sent</Text>*/}
-                            {/*    </div>*/}
-                            {/*)}*/}
+        <div className="static flex flex-col bg-inherit">
+            <div className="flex-grow overflow-y-auto z-10 h-full/2">
+                {history.map((msg, i) => (
+                    <div key={i} className="flex items-start space-x-2 mb-4">
+                        <div className="flex-shrink-0">
+                            {msg.role === 'user' ? <FaRegUser className="text-blue-500"/> : <FaRobot className="text-green-500"/>}
                         </div>
-                    );
-                })}
+                        <div className="flex border rounded p-2 bg-inherit relative select-text overscroll-contain">
+                            {msg.thinking ? (
+                                <div className="thinking">Thinking...</div>
+                            ) : (
+                                <ReactMarkdown
+                                    remarkPlugins={[gfm]}
+                                    rehypePlugins={[rehypeHighlight]}
+                                    children={msg.content}
+                                    transformLinkUri={(uri) => {
+                                        if (uri.startsWith('obsidian://')) {
+                                            return `javascript:window.open('${uri}','_blank')`;
+                                        }
+                                        return uri;
+                                    }}
+                                />
+                            )}
+                        </div>
+                        <button onClick={() => handleCopy(msg.content)} className="p-1 text-gray-500">
+                            <FaRegCopy />
+                        </button>
+                    </div>
+                ))}
             </div>
-            <div className="chat-view__footer">
-                <Grid container spacing={2}>
-                    <Grid item xs={10}>
-                        <TextField
-                            id="outlined-textarea"
-                            label="输入框"
-                            placeholder="今天你想问点什么？"
-                            multiline
-                            value={query}
-                            onChange={event => {setQuery(event.target.value)}}
-                        />
-                    </Grid>
-                    <Grid item xs={2}>
-                        <LoadingButton
-                            onClick={getAnswer}
-                            endIcon={<SendIcon />}
-                            loading={thinking}
-                            loadingPosition="end"
-                            variant="contained"
-                        >
-                            Send
-                        </LoadingButton>
-                    </Grid>
-                </Grid>
+            {/*<div className="fixed inset-x-0 bottom-24 m-2 h-24 bg-inherit z-20"></div>*/}
+            <div className="fixed inset-x-0 bottom-24 m-2 flex justify-around space-x-1 p-2 bg-inherit z-30">
+                <button onClick={handleImport} className="p-2 text-gray-500" title="将聊天记录导入到新笔记">
+                    <FaBookmark />
+                </button>
+                <button onClick={handleRegenerate} className="p-2 text-gray-500" title="重新生成">
+                    <FaRedo />
+                </button>
+                <button onClick={handleClear} className="p-2 text-gray-500" title="清空聊天记录">
+                    <FaTrash />
+                </button>
+            </div>
+            <div className="fixed inset-x-0 bottom-0 m-2 flex items-center justify-between p-3 bg-inherit z-30">
+                <div className="flex-grow mr-3">
+                    <TextareaAutosize
+                        className="w-full p-2 border-2 border-gray-400 resize-none focus:outline-none transition-all duration-150 ease-in-out bg-inherit text-black dark:text-white"
+                        minRows={2}
+                        maxRows={7}
+                        placeholder="今天你想问点什么？"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                    />
+                </div>
+                <button  onClick={getAnswer} disabled={thinking} className={`p-2 rounded ${thinking ? 'bg-gray-500 cursor-default' : 'bg-blue-500 hover:bg-blue-700'} text-black`}>
+                    {thinking ? 'Thinking...' : 'Send'} <FaPaperPlane />
+                </button>
             </div>
         </div>
     );
+
+
+
 }
 
 export default ChatView;
